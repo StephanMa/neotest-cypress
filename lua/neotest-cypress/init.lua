@@ -6,7 +6,6 @@ local lib = require("neotest.lib")
 
 ---@class neotest.CypressOptions
 ---@field cypressCommand? string|fun(): string
----@field cypressConfigFile? string|fun(): string
 ---@field env? table<string, string>|fun(): table<string, string>
 ---@field cwd? string|fun(): string
 ---@field strategy_config? table<string, unknown>|fun(): table<string, unknown>
@@ -18,9 +17,6 @@ local rootPackageJson = vim.fn.getcwd() .. "/package.json"
 
 local getCypressCommand = function(path)
   return "cypress"
-end
-local getCypressConfig = function(path)
-  return "cypress.config.ts"
 end
 
 local function getEnv(specEnv)
@@ -285,23 +281,6 @@ function adapter.discover_positions(path)
   return positions
 end
 
-local function escapeTestPattern(s)
-  return (
-    s:gsub("%(", "%\\(")
-      :gsub("%)", "%\\)")
-      :gsub("%]", "%\\]")
-      :gsub("%[", "%\\[")
-      :gsub("%*", "%\\*")
-      :gsub("%+", "%\\+")
-      :gsub("%-", "%\\-")
-      :gsub("%?", "%\\?")
-      :gsub("%$", "%\\$")
-      :gsub("%^", "%\\^")
-      :gsub("%/", "%\\/")
-      :gsub("%'", "%\\'")
-  )
-end
-
 ---@param args neotest.RunArgs
 ---@return neotest.RunSpec | nil
 function adapter.build_spec(args)
@@ -313,38 +292,17 @@ function adapter.build_spec(args)
   end
 
   local pos = args.tree:data()
-  local testNamePattern = "'.*'"
-
-  if pos.type == "test" or pos.type == "namespace" then
-    -- pos.id in form "path/to/file::Describe text::test text"
-    local testName = string.sub(pos.id, string.find(pos.id, "::") + 2)
-    testName, _ = string.gsub(testName, "::", " ")
-    testNamePattern = escapeTestPattern(testName)
-    testNamePattern = "'^" .. testNamePattern
-    if pos.type == "test" then
-      testNamePattern = testNamePattern .. "$'"
-    else
-      testNamePattern = testNamePattern .. "'"
-    end
-  end
 
   local binary = args.cypressCommand or getCypressCommand(pos.path)
-  local config = getCypressConfig(pos.path) or "cypress.config.js"
   local command = vim.split(binary, "%s+")
-  if util.path.exists(config) then
-    -- only use config if available
-    table.insert(command, "--config=" .. config)
-  end
+
+  local reporterOutputOption = "output=" .. results_path
 
   vim.list_extend(command, {
-    "--no-coverage",
-    "--testLocationInResults",
-    "--verbose",
-    "--json",
-    "--outputFile=" .. results_path,
-    "--testNamePattern=" .. testNamePattern,
-    "--forceExit",
-    escapeTestPattern(vim.fs.normalize(pos.path)),
+    "--quiet",
+    "--spec=" .. vim.fs.normalize(pos.path),
+    "--reporter=json",
+    "--reporter-options=" .. reporterOutputOption,
   })
 
   local cwd = getCwd(pos.path)
@@ -420,13 +378,6 @@ setmetatable(adapter, {
     elseif opts.cypressCommand then
       getCypressCommand = function()
         return opts.cypressCommand
-      end
-    end
-    if is_callable(opts.cypressConfigFile) then
-      getCypressConfig = opts.cypressConfigFile
-    elseif opts.cypressConfigFile then
-      getCypressConfig = function()
-        return opts.cypressConfigFile
       end
     end
     if is_callable(opts.env) then
