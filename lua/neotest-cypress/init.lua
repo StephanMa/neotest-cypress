@@ -20,13 +20,12 @@ local is_windows = uv.os_uname().version:match("Windows")
 local getCypressCommand = function(path)
 
   -- if os is windows, use command cypress; otherwise use npx cypress
-  local cmd = ""
   if is_windows then
-    cmd = "cypress"
+    return = "cypress"
   else
-    cmd = "npx cypress"
+    return "npx cypress"
   end
-  return cmd
+  
 end
 
 local function getEnv(specEnv)
