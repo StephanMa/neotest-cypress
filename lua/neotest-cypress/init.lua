@@ -21,7 +21,7 @@ local getCypressCommand = function(path)
 
   -- if os is windows, use command cypress; otherwise use npx cypress
   if is_windows then
-    return = "cypress"
+    return "cypress"
   else
     return "npx cypress"
   end
