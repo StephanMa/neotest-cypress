@@ -14,9 +14,19 @@ local lib = require("neotest.lib")
 local adapter = { name = "neotest-cypress" }
 
 local rootPackageJson = vim.fn.getcwd() .. "/package.json"
+-- check if os is windows
+local is_windows = uv.os_uname().version:match("Windows")
 
 local getCypressCommand = function(path)
-  return "cypress"
+
+  -- if os is windows, use command cypress; otherwise use npx cypress
+  local cmd = ""
+  if is_windows then
+    cmd = "cypress"
+  else
+    cmd = "npx cypress"
+  end
+  return cmd
 end
 
 local function getEnv(specEnv)
